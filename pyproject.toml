@@ -1,0 +1,15 @@
+[project]
+name = "inf349"
+version = "0.1.0"
+description = "Application Web de paiement de commandes Internet - UQAC INF349"
+requires-python = ">=3.8"
+dependencies = [
+    "flask>=1.1",
+    "peewee>=3.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0",
+    "pytest-flask>=1.0",
+]
