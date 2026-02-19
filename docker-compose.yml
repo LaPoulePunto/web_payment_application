@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - db_data:/app/data
+    environment:
+      FLASK_APP: inf349
+      FLASK_DEBUG: "true"
+      DATABASE: /app/data/inf349.db
+
+volumes:
+  db_data:
