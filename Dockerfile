@@ -3,6 +3,8 @@ FROM python:3.8-slim
 # Installation d'uv 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
+RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copier uniquement les fichiers nécessaires pour les dépendances
