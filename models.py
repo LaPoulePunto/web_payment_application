@@ -12,11 +12,13 @@ class BaseModel(Model):
 class Product(BaseModel):
     id = IntegerField(primary_key=True)
     name = CharField()
+    type = CharField()
     description = TextField()
-    price = FloatField()
-    weight = IntegerField()
-    in_stock = BooleanField(default=True)
     image = CharField()
+    height = IntegerField()
+    weight = IntegerField()
+    price = FloatField()
+    in_stock = BooleanField(default=True)
 
     class Meta:
         table_name = "products"
