@@ -1,5 +1,6 @@
 import os
-from flask import Flask
+import models
+from flask import Flask, jsonify
 from services.products_importer import import_products_from_url
 
 from models import db, initialize_db
@@ -17,7 +18,12 @@ def create_app() -> Flask:
 
     import_products_from_url(api_url)
 
+    @app.get('/')
+    def products_get():
+        products = list(models.Product.select().dicts())
+        return jsonify({"products": products})
+
+
     return app
 
-app = create_app
-
+app = create_app()
