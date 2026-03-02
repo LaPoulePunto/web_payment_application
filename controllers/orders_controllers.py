@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, url_for
 
-from services.orders_service import create_order_from_payload
+from services.orders_service import build_order_response, create_order_from_payload, get_order_by_id
 
 
 orders_bp = Blueprint("orders", __name__)
@@ -22,3 +22,16 @@ def create_order():
 
     location = url_for("orders.get_order", order_id=order.id)
     return "", 302, {"Location": location}
+
+
+@orders_bp.get("/order/<int:order_id>")
+def get_order(order_id: int):
+    """
+    Retourne les détails d'une commande à partir de son ID.
+    Si la commande n'existe pas, retourne une réponse d'erreur avec un code 404.
+    """
+    order = get_order_by_id(order_id)
+    if order is None:
+        return jsonify({"error": "Order not found"}), 404
+
+    return jsonify(build_order_response(order))
