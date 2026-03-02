@@ -105,3 +105,95 @@ def test_get_order_applies_tax_from_shipping_province(client):
     assert payload["order"]["total_price_tax"] == 32.31
     assert payload["order"]["shipping_information"]["province"] == "QC"
     assert payload["order"]["shipping_price"] == 5
+
+
+def test_put_order_updates_email_and_shipping_information(client):
+    create_response = client.post(
+        "/order",
+        json={"product": {"id": 1, "quantity": 1}},
+    )
+    location = create_response.headers["Location"]
+
+    response = client.put(
+        location,
+        json={
+            "order": {
+                "email": "jgnault@uqac.ca",
+                "shipping_information": {
+                    "country": "Canada",
+                    "address": "201, rue Président-Kennedy",
+                    "postal_code": "G7X 3Y7",
+                    "city": "Chicoutimi",
+                    "province": "QC",
+                },
+            }
+        },
+    )
+
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["order"]["email"] == "jgnault@uqac.ca"
+    assert payload["order"]["shipping_information"]["country"] == "Canada"
+    assert payload["order"]["shipping_information"]["address"] == "201, rue Président-Kennedy"
+    assert payload["order"]["shipping_information"]["postal_code"] == "G7X 3Y7"
+    assert payload["order"]["shipping_information"]["city"] == "Chicoutimi"
+    assert payload["order"]["shipping_information"]["province"] == "QC"
+    assert payload["order"]["product"]["id"] == 1
+    assert payload["order"]["product"]["quantity"] == 1
+    assert payload["order"]["paid"] is False
+    assert payload["order"]["total_price"] == pytest.approx(28.1)
+    assert payload["order"]["total_price_tax"] == 32.31
+    assert payload["order"]["shipping_price"] == 5
+    assert payload["order"]["credit_card"] == {}
+    assert payload["order"]["transaction"] == {}
+
+
+def test_put_order_returns_404_for_missing_order(client):
+    response = client.put(
+        "/order/999999",
+        json={
+            "order": {
+                "email": "jgnault@uqac.ca",
+                "shipping_information": {
+                    "country": "Canada",
+                    "address": "201, rue Président-Kennedy",
+                    "postal_code": "G7X 3Y7",
+                    "city": "Chicoutimi",
+                    "province": "QC",
+                },
+            }
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_put_order_missing_fields_returns_422(client):
+    create_response = client.post(
+        "/order",
+        json={"product": {"id": 1, "quantity": 1}},
+    )
+    location = create_response.headers["Location"]
+
+    response = client.put(
+        location,
+        json={
+            "order": {
+                "shipping_information": {
+                    "country": "Canada",
+                    "province": "QC",
+                }
+            }
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.get_json() == {
+        "errors": {
+            "order": {
+                "code": "missing-fields",
+                "name": "Il manque un ou plusieurs champs qui sont obligatoires",
+            }
+        }
+    }
