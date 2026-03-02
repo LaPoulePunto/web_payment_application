@@ -1,10 +1,23 @@
+import os
 from flask import Flask
+from services.products_importer import import_products_from_url
 
 from models import db, initialize_db
 
-app = Flask(__name__)
+def create_app() -> Flask:
+    app = Flask(__name__)
 
-
-@app.cli.command("init-db")
-def init_db_command():
+    @app.cli.command("init-db")
+    def init_db_command():
+        initialize_db()
+    
     initialize_db()
+
+    api_url = os.environ.get("PRODUCTS_URL")
+
+    import_products_from_url(api_url)
+
+    return app
+
+app = create_app
+
