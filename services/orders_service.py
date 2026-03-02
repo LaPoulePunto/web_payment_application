@@ -159,3 +159,63 @@ def build_order_response(order: models.Order) -> dict:
             "shipping_price": shipping_price,
         }
     }
+
+
+def update_order_customer_information(order_id: int, payload: dict):
+    """
+    Met à jour les informations d'une commande à partir du payload de la requête.
+    Le payload doit contenir les champs "customer_name" et "customer_email".
+    Si le payload est invalide, retourne une réponse d'erreur avec un code 422
+    Si la commande n'existe pas, retourne une réponse d'erreur avec un code 404.
+    Si la mise à jour est réussie, retourne les détails de la commande mise à jour
+    """
+    order = get_order_by_id(order_id)
+    if order is None:
+        return None, {"error": "Order not found"}, 404
+
+    order_payload = (payload or {}).get("order")
+    shipping_payload = (order_payload or {}).get("shipping_information") if isinstance(order_payload, dict) else None
+
+    required_shipping_fields = ["country", "address", "postal_code", "city", "province"]
+    has_missing_fields = (
+        not isinstance(order_payload, dict)
+        or "email" not in order_payload
+        or not isinstance(order_payload.get("email"), str)
+        or not order_payload.get("email")
+        or not isinstance(shipping_payload, dict)
+        or any(field not in shipping_payload or not shipping_payload.get(field) for field in required_shipping_fields)
+    )
+
+    if has_missing_fields:
+        return None, {
+            "errors": {
+                "order": {
+                    "code": "missing-fields",
+                    "name": "Il manque un ou plusieurs champs qui sont obligatoires",
+                }
+            }
+        }, 422
+
+    order.email = order_payload["email"]
+    order.save()
+
+    models.ShippingInformation.insert(
+        order=order,
+        country=shipping_payload["country"],
+        address=shipping_payload["address"],
+        postal_code=shipping_payload["postal_code"],
+        city=shipping_payload["city"],
+        province=shipping_payload["province"],
+    ).on_conflict(
+        conflict_target=[models.ShippingInformation.order],
+        preserve=[
+            models.ShippingInformation.country,
+            models.ShippingInformation.address,
+            models.ShippingInformation.postal_code,
+            models.ShippingInformation.city,
+            models.ShippingInformation.province,
+        ],
+    ).execute()
+
+    order = get_order_by_id(order_id)
+    return order, None, None

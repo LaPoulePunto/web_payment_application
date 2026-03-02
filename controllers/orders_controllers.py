@@ -1,6 +1,11 @@
 from flask import Blueprint, jsonify, request, url_for
 
-from services.orders_service import build_order_response, create_order_from_payload, get_order_by_id
+from services.orders_service import (
+    build_order_response,
+    create_order_from_payload,
+    get_order_by_id,
+    update_order_customer_information,
+)
 
 
 orders_bp = Blueprint("orders", __name__)
@@ -33,5 +38,23 @@ def get_order(order_id: int):
     order = get_order_by_id(order_id)
     if order is None:
         return jsonify({"error": "Order not found"}), 404
+
+    return jsonify(build_order_response(order))
+
+
+@orders_bp.put("/order/<int:order_id>")
+def update_order(order_id: int):
+    """
+    Met à jour les informations d'une commande à partir du payload de la requête.
+    Le payload doit contenir les champs "customer_name" et "customer_email".
+    Si le payload est invalide, retourne une réponse d'erreur avec un code 422
+    Si la commande n'existe pas, retourne une réponse d'erreur avec un code 404.
+    Si la mise à jour est réussie, retourne les détails de la commande mise à jour
+    """
+    payload = request.get_json(silent=True) or {}
+    order, error_body, error_status = update_order_customer_information(order_id, payload)
+
+    if error_body:
+        return jsonify(error_body), error_status
 
     return jsonify(build_order_response(order))
