@@ -5,18 +5,26 @@ from services.products_importer import import_products_from_url
 
 from models import db, initialize_db
 
-def create_app() -> Flask:
+def create_app(test_config=None) -> Flask:
     app = Flask(__name__)
+    app.config.from_mapping(
+        TESTING=False,
+        DATABASE_PATH="inf349.db",
+    )
+
+    if test_config:
+        app.config.update(test_config)
 
     @app.cli.command("init-db")
     def init_db_command():
-        initialize_db()
-    
-    initialize_db()
+        initialize_db(app.config["DATABASE_PATH"])
 
-    api_url = os.environ.get("PRODUCTS_URL")
+    initialize_db(app.config["DATABASE_PATH"])
 
-    import_products_from_url(api_url)
+    if not app.config["TESTING"]:
+        api_url = os.environ.get("PRODUCTS_URL")
+        if api_url:
+            import_products_from_url(api_url)
 
     @app.get('/')
     def products_get():
@@ -25,5 +33,3 @@ def create_app() -> Flask:
 
 
     return app
-
-app = create_app()

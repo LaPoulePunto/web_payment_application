@@ -66,8 +66,10 @@ class Transaction(BaseModel):
         table_name = "transactions"
 
 
-def initialize_db():
-    db.connect(reuse_if_open=True)
+def initialize_db(db_path: str = "app.db") -> None:
+    db.init(db_path)
+    if db.is_closed():
+        db.connect()
     db.create_tables(
         [Product, Order, ShippingInformation, CreditCard, Transaction],
         safe=True,
