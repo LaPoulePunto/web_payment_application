@@ -53,3 +53,55 @@ def test_create_order_out_of_inventory_returns_422(client):
             }
         }
     }
+
+
+def test_get_order_returns_created_order(client):
+    create_response = client.post(
+        "/order",
+        json={"product": {"id": 1, "quantity": 3}},
+    )
+    location = create_response.headers["Location"]
+
+    get_response = client.get(location)
+    payload = get_response.get_json()
+
+    assert get_response.status_code == 200
+    assert payload["order"]["id"] is not None
+    assert payload["order"]["total_price"] == pytest.approx(84.3)
+    assert payload["order"]["total_price_tax"] == 84.3
+    assert payload["order"]["email"] is None
+    assert payload["order"]["credit_card"] == {}
+    assert payload["order"]["shipping_information"] == {}
+    assert payload["order"]["transaction"] == {}
+    assert payload["order"]["paid"] is False
+    assert payload["order"]["shipping_price"] == 10
+    assert payload["order"]["product"]["id"] == 1
+    assert payload["order"]["product"]["quantity"] == 3
+
+
+def test_get_order_applies_tax_from_shipping_province(client):
+    create_response = client.post(
+        "/order",
+        json={"product": {"id": 1, "quantity": 1}},
+    )
+    location = create_response.headers["Location"]
+    order_id = int(location.split("/")[-1])
+    order = models.Order.get_by_id(order_id)
+
+    models.ShippingInformation.create(
+        order=order,
+        country="Canada",
+        address="1 rue test",
+        postal_code="G1G1G1",
+        city="Quebec",
+        province="QC",
+    )
+
+    get_response = client.get(location)
+    payload = get_response.get_json()
+
+    assert get_response.status_code == 200
+    assert payload["order"]["total_price"] == pytest.approx(28.1)
+    assert payload["order"]["total_price_tax"] == 32.31
+    assert payload["order"]["shipping_information"]["province"] == "QC"
+    assert payload["order"]["shipping_price"] == 5
