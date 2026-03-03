@@ -12,11 +12,13 @@ class BaseModel(Model):
 class Product(BaseModel):
     id = IntegerField(primary_key=True)
     name = CharField()
+    type = CharField()
     description = TextField()
-    price = FloatField()
-    weight = IntegerField()
-    in_stock = BooleanField(default=True)
     image = CharField()
+    height = IntegerField()
+    weight = IntegerField()
+    price = FloatField()
+    in_stock = BooleanField(default=True)
 
     class Meta:
         table_name = "products"
@@ -64,8 +66,10 @@ class Transaction(BaseModel):
         table_name = "transactions"
 
 
-def initialize_db():
-    db.connect(reuse_if_open=True)
+def initialize_db(db_path: str = "app.db") -> None:
+    db.init(db_path)
+    if db.is_closed():
+        db.connect()
     db.create_tables(
         [Product, Order, ShippingInformation, CreditCard, Transaction],
         safe=True,
