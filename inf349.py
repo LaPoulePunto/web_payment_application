@@ -1,9 +1,10 @@
 import os
 import models
 from flask import Flask, jsonify
+from controllers.orders_controllers import orders_bp
 from services.products_importer import import_products_from_url
 
-from models import db, initialize_db
+from models import initialize_db
 
 def create_app(test_config=None) -> Flask:
     app = Flask(__name__)
@@ -31,5 +32,6 @@ def create_app(test_config=None) -> Flask:
         products = list(models.Product.select().dicts())
         return jsonify({"products": products})
 
+    app.register_blueprint(orders_bp)
 
     return app

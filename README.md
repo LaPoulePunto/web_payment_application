@@ -8,6 +8,14 @@ Application Web Flask de gestion de commandes Internet avec API REST.
 
 Pour ce projet, nous utilisons Flask, Peewee, uv pour les dépendances et Docker.
 
+## Avant de lancer le projet
+
+Il faut créer un fichier .env avec la variable d'environnement de l'url de l'API, afin de récupérer l'ensemble des produits.
+Pour cela copier cette ligne dans votre fichier et remplacez la valeur `url_de_l_api` par l'url de votre api:
+```bash
+PRODUCTS_URL="url_de_l_api"
+```
+
 ## Lancer le projet
 
 ```bash
