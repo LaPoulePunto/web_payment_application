@@ -15,6 +15,7 @@ def app(tmp_path):
     app = create_app({
         "TESTING": True,
         "DATABASE_PATH": str(test_db_path),
+        "PAYMENT_URL": "http://fake-payment.test/pay/",
     })
 
     models.Product.create(

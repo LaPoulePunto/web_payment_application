@@ -14,14 +14,19 @@ Il faut créer un fichier .env avec la variable d'environnement de l'url de l'AP
 Pour cela copier cette ligne dans votre fichier et remplacez la valeur `url_de_l_api` par l'url de votre api:
 ```bash
 PRODUCTS_URL="url_de_l_api"
+PAYMENT_URL="url_de_l_api"
 ```
 
 ## Lancer le projet
 
 ```bash
-docker compose run --rm web uv run flask init-db
-docker compose up
+flask --app inf349:create_app --debug run
 ```
 
 L'API est disponible sur `http://localhost:5000`.
 
+## Lancer les tests
+
+```bash
+uv run pytest
+```
