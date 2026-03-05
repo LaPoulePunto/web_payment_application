@@ -1,9 +1,11 @@
-from flask import Blueprint, jsonify, request, url_for
+import os
+from flask import Blueprint, current_app, jsonify, request, url_for
 
 from services.orders_service import (
     build_order_response,
     create_order_from_payload,
     get_order_by_id,
+    pay_order_with_credit_card,
     update_order_customer_information,
 )
 
@@ -45,16 +47,22 @@ def get_order(order_id: int):
 @orders_bp.put("/order/<int:order_id>")
 def update_order(order_id: int):
     """
-    Met à jour les informations d'une commande à partir du payload de la requête.
-    Le payload doit contenir les champs "customer_name" et "customer_email".
-    Si le payload est invalide, retourne une réponse d'erreur avec un code 422
+    Met à jour les informations d'une commande.
+    - Si le payload contient "credit_card", appelle le service de paiement distant.
+    - Si le payload contient "order" (email + shipping_information), met à jour les infos client.
+    Si le payload est invalide, retourne une réponse d'erreur avec un code 422.
     Si la commande n'existe pas, retourne une réponse d'erreur avec un code 404.
-    Si la mise à jour est réussie, retourne les détails de la commande mise à jour
     """
     payload = request.get_json(silent=True) or {}
-    order, error_body, error_status = update_order_customer_information(order_id, payload)
+
+    if "credit_card" in payload:
+        payment_url = current_app.config.get("PAYMENT_URL") or os.environ.get("PAYMENT_URL", "")
+        order, error_body, error_status = pay_order_with_credit_card(order_id, payload, payment_url)
+    else:
+        order, error_body, error_status = update_order_customer_information(order_id, payload)
 
     if error_body:
         return jsonify(error_body), error_status
 
     return jsonify(build_order_response(order))
+    
