@@ -1,3 +1,6 @@
+import json
+import urllib.request
+import urllib.error
 import models
 
 TAX_RATES_BY_PROVINCE = {
@@ -216,6 +219,142 @@ def update_order_customer_information(order_id: int, payload: dict):
             models.ShippingInformation.province,
         ],
     ).execute()
+
+    order = get_order_by_id(order_id)
+    return order, None, None
+
+
+def pay_order_with_credit_card(order_id: int, payload: dict, payment_url: str):
+    """
+    Applique une carte de crédit à une commande et appelle le service de paiement distant.
+    Le payload doit contenir un champ "credit_card".
+    Retourne (order, error_body, error_status).
+    """
+    order = get_order_by_id(order_id)
+    if order is None:
+        return None, {"error": "Order not found"}, 404
+
+    credit_card_payload = (payload or {}).get("credit_card")
+
+    # On ne peut pas envoyer credit_card ET shipping_information/email ensemble
+    order_payload = (payload or {}).get("order")
+    if order_payload is not None:
+        return None, {
+            "errors": {
+                "order": {
+                    "code": "missing-fields",
+                    "name": "Les informations du client sont nécessaire avant d'appliquer une carte de crédit",
+                }
+            }
+        }, 422
+
+    if not isinstance(credit_card_payload, dict):
+        return None, {
+            "errors": {
+                "order": {
+                    "code": "missing-fields",
+                    "name": "Les informations du client sont nécessaire avant d'appliquer une carte de crédit",
+                }
+            }
+        }, 422
+
+    # Vérifier que la commande a déjà été payée
+    if order.paid:
+        return None, {
+            "errors": {
+                "order": {
+                    "code": "already-paid",
+                    "name": "La commande a déjà été payée.",
+                }
+            }
+        }, 422
+
+    # Vérifier que l'email et les infos d'expédition sont présents
+    shipping = models.ShippingInformation.get_or_none(models.ShippingInformation.order == order)
+    if not order.email or shipping is None:
+        return None, {
+            "errors": {
+                "order": {
+                    "code": "missing-fields",
+                    "name": "Les informations du client sont nécessaire avant d'appliquer une carte de crédit",
+                }
+            }
+        }, 422
+
+    # Calculer le montant total (total_price_tax + shipping_price) en cents
+    province = shipping.province.upper()
+    tax_rate = TAX_RATES_BY_PROVINCE.get(province, 0.0)
+    total_price = order.product.price * order.quantity
+    total_price_tax = round(total_price * (1 + tax_rate), 2)
+    total_weight_grams = order.product.weight * order.quantity
+    shipping_price = _compute_shipping_price(total_weight_grams)
+    amount_charged = round((total_price_tax + shipping_price) * 100)
+
+    # Forcer HTTPS pour éviter les redirections HTTP→HTTPS
+    if payment_url.startswith("http://"):
+        payment_url = "https://" + payment_url[len("http://"):]
+
+    # Appel au service de paiement distant
+    request_body = json.dumps({
+        "credit_card": credit_card_payload,
+        "amount_charged": amount_charged,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        payment_url,
+        data=request_body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req) as resp:
+            response_data = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode()
+        errors = json.loads(raw).get("errors", {}) if raw.strip() else {}
+        # Retourner l'erreur du service distant telle quelle
+        return None, {"credit_card": errors.get("credit_card", {"code": "card-declined", "name": "La carte de crédit a été déclinée."})}, 422
+
+    # Persister les infos de carte de crédit retournées
+    cc_data = response_data.get("credit_card", {})
+    models.CreditCard.insert(
+        order=order,
+        name=cc_data.get("name"),
+        first_digits=cc_data.get("first_digits"),
+        last_digits=cc_data.get("last_digits"),
+        expiration_year=cc_data.get("expiration_year"),
+        expiration_month=cc_data.get("expiration_month"),
+    ).on_conflict(
+        conflict_target=[models.CreditCard.order],
+        preserve=[
+            models.CreditCard.name,
+            models.CreditCard.first_digits,
+            models.CreditCard.last_digits,
+            models.CreditCard.expiration_year,
+            models.CreditCard.expiration_month,
+        ],
+    ).execute()
+
+    # Persister la transaction
+    tx_data = response_data.get("transaction", {})
+    models.Transaction.insert(
+        order=order,
+        transaction_id=tx_data.get("id"),
+        success=tx_data.get("success"),
+        amount_charged=tx_data.get("amount_charged"),
+    ).on_conflict(
+        conflict_target=[models.Transaction.order],
+        preserve=[
+            models.Transaction.transaction_id,
+            models.Transaction.success,
+            models.Transaction.amount_charged,
+        ],
+    ).execute()
+
+    # Marquer la commande comme payée
+    order.paid = True
+    order.save()
 
     order = get_order_by_id(order_id)
     return order, None, None
