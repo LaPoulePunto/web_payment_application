@@ -14,6 +14,7 @@ Il faut créer un fichier .env avec la variable d'environnement de l'url de l'AP
 Pour cela copier cette ligne dans votre fichier et remplacez la valeur `url_de_l_api` par l'url de votre api:
 ```bash
 PRODUCTS_URL="url_de_l_api"
+PAYMENT_URL="url_de_l_api"
 ```
 
 ## Lancer le projet
