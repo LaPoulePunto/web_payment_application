@@ -1,0 +1,197 @@
+{
+  "info": {
+    "name": "INF349 - Web Payment Application",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": ["{{baseUrl}}"],
+          "path": [""]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response contains products array', function () {",
+              "  pm.expect(pm.response.json()).to.have.property('products');",
+              "  pm.expect(pm.response.json().products).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST /order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product\": {\n    \"id\": 1,\n    \"quantity\": 1\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order",
+          "host": ["{{baseUrl}}"],
+          "path": ["order"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 302', function () {",
+              "  pm.response.to.have.status(302);",
+              "});",
+              "",
+              "pm.test('Location header contains order id and stores orderId variable', function () {",
+              "  const location = pm.response.headers.get('Location');",
+              "  pm.expect(location).to.be.a('string');",
+              "  pm.expect(location).to.match(/\\/order\\/\\d+$/);",
+              "  const orderId = location.split('/').pop();",
+              "  pm.collectionVariables.set('orderId', orderId);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /order/{{orderId}}",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/order/{{orderId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["order", "{{orderId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response contains order object', function () {",
+              "  pm.expect(pm.response.json()).to.have.property('order');",
+              "  pm.expect(pm.response.json().order).to.have.property('id');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PUT /order/{{orderId}} - shipping informations",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"order\": {\n    \"email\": \"jgnault@uqac.ca\",\n    \"shipping_information\": {\n      \"country\": \"Canada\",\n      \"address\": \"201, rue Président-Kennedy\",\n      \"postal_code\": \"G7X 3Y7\",\n      \"city\": \"Chicoutimi\",\n      \"province\": \"QC\"\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order/{{orderId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["order", "{{orderId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Shipping information is saved', function () {",
+              "  pm.expect(pm.response.json().order.shipping_information.province).to.eql('QC');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PUT /order/{{orderId}} - credits",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"credit_card\": {\n    \"name\": \"John Doe\",\n    \"number\": \"4242 4242 4242 4242\",\n    \"expiration_year\": 2027,\n    \"expiration_month\": 9,\n    \"cvv\": \"123\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/order/{{orderId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["order", "{{orderId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Order is paid after credit card charge', function () {",
+              "  pm.expect(pm.response.json().order.paid).to.eql(true);",
+              "  pm.expect(pm.response.json().order.transaction).to.have.property('id');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    }
+  ]
+}
