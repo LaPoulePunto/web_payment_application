@@ -10,12 +10,18 @@ Pour ce projet, nous utilisons Flask, Peewee, uv pour les dépendances et Docker
 
 ## Avant de lancer le projet
 
-Il faut créer un fichier .env avec la variable d'environnement de l'url de l'API, afin de récupérer l'ensemble des produits.
-Pour cela copier cette ligne dans votre fichier et remplacez la valeur `url_de_l_api` par l'url de votre api:
+**1. Installer uv** (gestionnaire de dépendances python) : [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
+
+**2. Installer les dépendances :**
 ```bash
-PRODUCTS_URL="url_de_l_api"
-PAYMENT_URL="url_de_l_api"
+uv sync
 ```
+
+**3. Configurer le fichier `.env` :**
+```bash
+cp .env.example .env
+```
+Le fichier `.env.example` contient déjà les URLs des services distants, aucune modification n'est nécessaire.
 
 ## Lancer le projet
 
@@ -30,3 +36,33 @@ L'API est disponible sur `http://localhost:5000`.
 ```bash
 uv run pytest
 ```
+
+## Lancer la couverture de tests
+
+```bash
+uv run pytest --cov=. --cov-report=html
+```
+
+Le rapport HTML est généré dans `htmlcov/index.html`.
+
+## Suite Postman
+
+Une collection Postman est disponible dans `postman/INF349.postman_collection.json`.
+
+Elle couvre les requêtes suivantes dans l'ordre :
+
+- `GET /`
+- `POST /order`
+- `GET /order/<id>`
+- `PUT /order/<id>`
+- `PUT /order/<id>`
+
+### Exécuter la suite
+
+1. Lancer l'application Flask.
+2. Importer la collection `postman/INF349.postman_collection.json` dans Postman.
+3. Vérifier la variable `baseUrl` (par défaut `http://localhost:5000`).
+4. Remplir le `orderId`.
+5. Exécuter la collection avec **Collection Runner**.
+
+
